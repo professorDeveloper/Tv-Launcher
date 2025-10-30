@@ -10,6 +10,9 @@ class LauncherPreferences(context: Context) {
     fun saveLauncherState(key: String, value: String) {
         sharedPreferences.edit().putString(key, value).apply()
     }
+    fun saveLauncherState(key: String, value: Long) {
+        sharedPreferences.edit().putLong(key, value).apply()
+    }
 
     fun saveLauncherState(key: String, value: Boolean) {
         sharedPreferences.edit().putBoolean(key, value).apply()
@@ -17,9 +20,6 @@ class LauncherPreferences(context: Context) {
 
     fun saveLauncherState(key: String, value: Int) {
         sharedPreferences.edit().putInt(key, value).apply()
-    }
- fun saveLauncherState(key: String, value: Long) {
-        sharedPreferences.edit().putLong(key, value).apply()
     }
 
     fun getLauncherState(key: String, defaultValue: String = ""): String {

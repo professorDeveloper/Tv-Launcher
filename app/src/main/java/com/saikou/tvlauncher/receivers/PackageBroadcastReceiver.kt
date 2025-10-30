@@ -30,16 +30,9 @@ class PackageBroadcastReceiver(
             }
         }
 
-        fun registerReceiver(
-            context: Context,
-            receiver: PackageBroadcastReceiver
-        ) {
+        fun registerReceiver(context: Context, receiver: PackageBroadcastReceiver) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(
-                    receiver,
-                    getIntentFilter(),
-                    Context.RECEIVER_EXPORTED
-                )
+                context.registerReceiver(receiver, getIntentFilter(), Context.RECEIVER_EXPORTED)
             } else {
                 context.registerReceiver(receiver, getIntentFilter())
             }

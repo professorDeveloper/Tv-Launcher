@@ -1,20 +1,23 @@
 package com.saikou.tvlauncher
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
-import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
+import androidx.recyclerview.widget.GridLayoutManager
 import com.saikou.tvlauncher.adapters.AppGridAdapter
 import com.saikou.tvlauncher.data.local.LauncherPreferences
 import com.saikou.tvlauncher.data.model.AppInfo
 import com.saikou.tvlauncher.databinding.ActivityMainBinding
 import com.saikou.tvlauncher.receivers.PackageBroadcastReceiver
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,12 +33,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = LauncherPreferences(this)
-        val count = prefs.getLauncherState(LauncherPreferences.KEY_LAUNCHER_OPENED_COUNT, 0) + 1
-        prefs.saveLauncherState(LauncherPreferences.KEY_LAUNCHER_OPENED_COUNT, count)
-        prefs.saveLauncherState(
-            LauncherPreferences.KEY_LAST_OPENED_TIME,
-            System.currentTimeMillis()
-        )
+        startClock()
+
+        val openedCount = prefs.getLauncherState(LauncherPreferences.KEY_LAUNCHER_OPENED_COUNT, 0) + 1
+        prefs.saveLauncherState(LauncherPreferences.KEY_LAUNCHER_OPENED_COUNT, openedCount)
+        prefs.saveLauncherState(LauncherPreferences.KEY_LAST_OPENED_TIME, System.currentTimeMillis())
 
         loadApps()
         setupGrid()
@@ -43,40 +45,78 @@ class MainActivity : AppCompatActivity() {
         setupBackPress()
         setupPackageReceiver()
         handleHomeIntent(intent)
-        checkAndPromptForDefaultLauncher()
-    }
-    private fun checkAndPromptForDefaultLauncher() {
+        setupSearch()
+        setupSettingsButton()
         if (prefs.getLauncherState(LauncherPreferences.KEY_IS_FIRST_LAUNCH, true)) {
             prefs.saveLauncherState(LauncherPreferences.KEY_IS_FIRST_LAUNCH, false)
-
-            binding.root.postDelayed({
-                showDefaultLauncherDialog()
-            }, 3000)
+            binding.root.postDelayed({ showDefaultLauncherDialog() }, 3000)
         }
     }
+    private fun setupSearch() {
+        binding.searchInput.addTextChangedListener { text ->
+            val query = text.toString().lowercase()
+            val filtered = appList.filter { it.appName.lowercase().contains(query) }
+            adapter.updateAppItems(filtered)
+        }
+    }
+    private fun setupSettingsButton() {
+        binding.settingsButton.setOnClickListener {
+            startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!isDefaultLauncher()) {
+            showDefaultLauncherDialog()
+        }
+    }
+
+    private fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName == packageName
+    }
+
+    private fun startClock() {
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        handler.post(object : Runnable {
+            @SuppressLint("SetTextI18n")
+            override fun run() {
+                val sdfTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val sdfDate = SimpleDateFormat("d MMM, EEEE", Locale("uz", "UZ"))
+                binding.clock.text = sdfTime.format(Date())
+                binding.date.text = " | ${sdfDate.format(Date())}"
+                handler.postDelayed(this, 1000)
+            }
+        })
+    }
+
     private fun showDefaultLauncherDialog() {
         AlertDialog.Builder(this)
             .setTitle("Launcher o'rnatish")
-            .setMessage("Bu ilovani doimiy Home ekran qilmoqchimisiz?\n\n" +
-                    "Home tugmasi bosilganda faqat ushbu ilova ochiladi.")
-            .setPositiveButton("Ha, o'rnatish") { _, _ ->
-                openDefaultLauncherSettings()
-            }
+            .setMessage("Bu ilovani doimiy Home ekran qilmoqchimisiz?\n\nHome tugmasi bosilganda faqat ushbu ilova ochiladi.")
+            .setPositiveButton("Ha, o'rnatish") { _, _ -> openDefaultLauncherSettings() }
             .setNegativeButton("Yo'q", null)
             .setCancelable(false)
             .show()
     }
+
     private fun openDefaultLauncherSettings() {
-        try {
-            startActivity(Intent("android.settings.HOME_SETTINGS"))
-        } catch (e: Exception) {
-            try {
-                startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-            } catch (e: Exception) {
-                Toast.makeText(this, "Sozlamalarni qo‘lda oching: Ilovalar → Default ilovalar → Home", Toast.LENGTH_LONG).show()
-            }
-        }
+        var intent = Intent("com.android.tv.action.HOME_SETTINGS").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        if (canResolveIntent(intent)) { startActivity(intent); return }
+
+        intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        if (canResolveIntent(intent)) { startActivity(intent); return }
+
     }
+
+    private fun canResolveIntent(intent: Intent): Boolean = packageManager.resolveActivity(intent, 0) != null
+
+
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         intent?.let { setIntent(it) }
@@ -84,72 +124,107 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleHomeIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_MAIN &&
-            intent.hasCategory(Intent.CATEGORY_HOME)
-        ) {
-            moveTaskToBack(false)
-
-            restoreScrollPosition()
-
-            binding.appGrid.requestFocus()
+        if (intent?.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
+            binding.root.requestFocus()
         }
     }
 
     private fun loadApps() {
         appList.clear()
         val pm = packageManager
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-        }
-        pm.queryIntentActivities(intent, 0).forEach { info ->
-            val pkg = info.activityInfo.packageName
-            if (pkg != packageName) {
-                appList.add(
-                    AppInfo(
-                        info.loadLabel(pm).toString(),
-                        pkg,
-                        info.loadIcon(pm)
-                    )
-                )
+        val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+
+        for (app in installedApps) {
+            val pkg = app.packageName
+            if (pkg == packageName) continue
+
+            var intent: Intent? = pm.getLaunchIntentForPackage(pkg)
+
+            if (intent == null) {
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(pkg)
+                }
+                val resolve = pm.resolveActivity(launcherIntent, 0)
+                if (resolve != null) {
+                    intent = Intent(Intent.ACTION_MAIN).apply {
+                        setClassName(pkg, resolve.activityInfo.name)
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                    }
+                }
+            }
+
+            if (intent == null) {
+                val leanbackIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    setPackage(pkg)
+                }
+                val resolve = pm.resolveActivity(leanbackIntent, 0)
+                if (resolve != null) {
+                    intent = Intent(Intent.ACTION_MAIN).apply {
+                        setClassName(pkg, resolve.activityInfo.name)
+                        addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    }
+                }
+            }
+
+            if (intent != null) {
+                val label = app.loadLabel(pm).toString()
+                val icon = app.loadIcon(pm)
+                appList.add(AppInfo(label, pkg, icon))
             }
         }
-        appList.sortBy { it.appName }
+
+        appList.sortBy { it.appName.lowercase() }
     }
 
     private fun setupGrid() {
         adapter = AppGridAdapter(ArrayList(appList))
         binding.appGrid.apply {
+            layoutManager = GridLayoutManager(this@MainActivity, 6)
+            setHasFixedSize(true)
             adapter = this@MainActivity.adapter
-            setNumColumns(5)
         }
         adapter.setOnItemClickedListener { app, _ -> launchApp(app.packageName) }
     }
 
     private fun launchApp(pkg: String) {
         try {
-            val intent = packageManager.getLaunchIntentForPackage(pkg)
-            if (intent != null) {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
-                return
+            var intent = packageManager.getLaunchIntentForPackage(pkg)
+
+            if (intent == null) {
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(pkg)
+                }
+                val resolve = packageManager.resolveActivity(launcherIntent, 0)
+                if (resolve != null) {
+                    intent = Intent(Intent.ACTION_MAIN).apply {
+                        setClassName(pkg, resolve.activityInfo.name)
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                    }
+                }
             }
 
-            val leanback = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                setPackage(pkg)
+            if (intent == null) {
+                val leanbackIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    setPackage(pkg)
+                }
+                val resolve = packageManager.resolveActivity(leanbackIntent, 0)
+                if (resolve != null) {
+                    intent = Intent(Intent.ACTION_MAIN).apply {
+                        setClassName(pkg, resolve.activityInfo.name)
+                        addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    }
+                }
             }
-            val activity = packageManager.queryIntentActivities(leanback, 0).firstOrNull()
-                ?: throw Exception("No launchable activity")
 
-            startActivity(Intent(Intent.ACTION_MAIN).apply {
-                setClassName(pkg, activity.activityInfo.name)
-                addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-
+            intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent ?: throw Exception("No intent"))
         } catch (e: Exception) {
             Log.e("TvLauncher", "Launch failed: $pkg", e)
-            Toast.makeText(this, "Can't open $pkg", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Ilovani ochib bo‘lmadi: $pkg", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -165,28 +240,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {}
+            override fun handleOnBackPressed() { }
         })
     }
 
     override fun onPause() {
         super.onPause()
-        val pos = binding.appGrid.selectedPosition
+        val pos = (binding.appGrid.layoutManager as? GridLayoutManager)
+            ?.findFirstCompletelyVisibleItemPosition() ?: -1
         if (pos >= 0) prefs.saveLauncherState(LauncherPreferences.KEY_LAST_SCROLL_POSITION, pos)
     }
 
     override fun onDestroy() {
-        try {
-            unregisterReceiver(pkgReceiver)
-        } catch (_: Exception) {
-        }
+        try { unregisterReceiver(pkgReceiver) } catch (_: Exception) { }
         super.onDestroy()
     }
 
     private fun restoreScrollPosition() {
         val pos = prefs.getLauncherState(LauncherPreferences.KEY_LAST_SCROLL_POSITION, 0)
         if (pos in appList.indices) {
-            binding.appGrid.post { binding.appGrid.setSelectedPosition(pos) }
+            binding.appGrid.post {
+                binding.appGrid.scrollToPosition(pos)
+                (binding.appGrid.layoutManager as GridLayoutManager)
+                    .findViewByPosition(pos)?.requestFocus()
+            }
         }
     }
 }

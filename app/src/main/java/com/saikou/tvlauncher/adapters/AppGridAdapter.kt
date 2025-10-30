@@ -50,16 +50,12 @@ class AppGridAdapter(
                     onItemClicked.invoke(app, absoluteAdapterPosition)
                 }
 
-                binding.root.setOnFocusChangeListener { _, hasFocus ->
+                root.setOnFocusChangeListener { _, hasFocus ->
                     val animation = when {
-                        hasFocus -> AnimationUtils.loadAnimation(
-                            binding.root.context, R.anim.zoom_in
-                        )
-                        else -> AnimationUtils.loadAnimation(
-                            binding.root.context, R.anim.zoom_out
-                        )
+                        hasFocus -> AnimationUtils.loadAnimation(root.context, R.anim.zoom_in)
+                        else -> AnimationUtils.loadAnimation(root.context, R.anim.zoom_out)
                     }
-                    binding.root.startAnimation(animation)
+                    root.startAnimation(animation)
                     animation.fillAfter = true
                 }
             }
