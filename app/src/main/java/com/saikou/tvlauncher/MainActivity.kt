@@ -33,6 +33,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = LauncherPreferences(this)
+
+        binding.root.alpha = 0f
+        binding.root.animate().alpha(1f).setDuration(600).start()
+
         startClock()
 
         val openedCount = prefs.getLauncherState(LauncherPreferences.KEY_LAUNCHER_OPENED_COUNT, 0) + 1
@@ -52,16 +56,42 @@ class MainActivity : AppCompatActivity() {
             binding.root.postDelayed({ showDefaultLauncherDialog() }, 3000)
         }
     }
+
     private fun setupSearch() {
         binding.searchInput.addTextChangedListener { text ->
             val query = text.toString().lowercase()
             val filtered = appList.filter { it.appName.lowercase().contains(query) }
+
             adapter.updateAppItems(filtered)
+            binding.appGrid.scheduleLayoutAnimation()
+        }
+
+        binding.searchInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                binding.searchLayout.boxStrokeColor =
+                    resources.getColor(android.R.color.holo_red_dark, null)
+            } else {
+                binding.searchLayout.boxStrokeColor =
+                    resources.getColor(android.R.color.darker_gray, null)
+            }
         }
     }
+
     private fun setupSettingsButton() {
         binding.settingsButton.setOnClickListener {
-            startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
+            binding.settingsButton.animate()
+                .scaleX(0.9f)
+                .scaleY(0.9f)
+                .setDuration(100)
+                .withEndAction {
+                    binding.settingsButton.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(100)
+                        .start()
+                    startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
+                }
+                .start()
         }
     }
 
@@ -114,8 +144,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun canResolveIntent(intent: Intent): Boolean = packageManager.resolveActivity(intent, 0) != null
-
-
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -224,7 +252,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent ?: throw Exception("No intent"))
         } catch (e: Exception) {
             Log.e("TvLauncher", "Launch failed: $pkg", e)
-            Toast.makeText(this, "Ilovani ochib bo‘lmadi: $pkg", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Ilovani ochib bo'lmadi: $pkg", Toast.LENGTH_SHORT).show()
         }
     }
 

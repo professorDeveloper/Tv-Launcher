@@ -43,5 +43,7 @@ class LauncherPreferences(context: Context) {
         const val KEY_LAUNCHER_OPENED_COUNT = "launcher_opened_count"
         const val KEY_LAST_OPENED_TIME = "last_opened_time"
         const val KEY_IS_FIRST_LAUNCH = "is_first_launch"
+        const val KEY_SELECTED_WALLPAPER = "selected_wallpaper"
+        const val KEY_SELECTED_THEME = "selected_theme"
     }
 }
