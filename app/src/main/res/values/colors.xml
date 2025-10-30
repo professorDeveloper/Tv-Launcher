@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="selected_bg">#0F141C</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="navigation_background">#EE1A1E25</color>
+    <color name="main_background">#1B1E23</color>
+    <color name="orange">#FF9800</color>
+    <color name="netflix_black">#141414</color>
+    <color name="netflix_dark_gray">#2F2F2F</color>
+    <color name="netflix_gray">#B3B3B3</color>
+    <color name="netflix_white">#FFFFFF</color>
+    <color name="netflix_red">#E50914</color>
+    <color name="netflix_divider">#404040</color>
+    <color name="netflix_section">#292828</color>
+    <color name="netflix_background_primary">#141414</color>
+    <color name="netflix_background_secondary">#2F2F2F</color>
+
+</resources>
