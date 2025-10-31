@@ -26,10 +26,7 @@ class MainActivity : AppCompatActivity() {
     private val appList = mutableListOf<AppInfo>()
     private lateinit var prefs: LauncherPreferences
     private lateinit var pkgReceiver: PackageBroadcastReceiver
-    companion object {
-        private const val ADMIN_PERMISSION_REQUEST_CODE = 123
-        private const val TAG = "DeviceAdminTest"
-    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
