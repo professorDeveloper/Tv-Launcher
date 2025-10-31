@@ -66,15 +66,6 @@ class MainActivity : AppCompatActivity() {
             binding.appGrid.scheduleLayoutAnimation()
         }
 
-        binding.searchInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.searchLayout.boxStrokeColor =
-                    resources.getColor(android.R.color.holo_red_dark, null)
-            } else {
-                binding.searchLayout.boxStrokeColor =
-                    resources.getColor(android.R.color.darker_gray, null)
-            }
-        }
     }
 
     private fun setupSettingsButton() {

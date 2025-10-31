@@ -63,6 +63,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:focusable="true"
+            android:textColorHint="@color/netflix_red"
+            android:textColorHighlight="@color/netflix_red"
             android:inputType="text"
             android:textColor="#FFFFFF" />
 
