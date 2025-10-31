@@ -29,9 +29,10 @@
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:resizeableActivity="false"
-            android:taskAffinity="">
+            android:taskAffinity=""
+            tools:ignore="DiscouragedApi,NonResizeableActivity">
 
-            <intent-filter android:priority="1000">
+            <intent-filter android:priority="100000">
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.HOME"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -43,11 +44,10 @@
             android:name=".receivers.BootReceiver"
             android:enabled="true"
             android:exported="true">
-            <intent-filter android:priority="1000">
+            <intent-filter android:priority="100000">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
-
         <receiver
             android:name=".receivers.PackageBroadcastReceiver"
             android:enabled="true"
